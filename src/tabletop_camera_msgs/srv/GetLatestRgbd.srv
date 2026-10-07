@@ -1,0 +1,10 @@
+# Empty request
+---
+bool success
+string message
+uint8[] rgb_jpeg
+uint8[] depth_png
+sensor_msgs/CameraInfo camera_info
+geometry_msgs/TransformStamped t_world_cam
+builtin_interfaces/Time stamp
+string frame_id
