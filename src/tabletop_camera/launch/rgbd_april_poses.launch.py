@@ -9,6 +9,8 @@ def generate_launch_description():
     arm_base_link_frame = "base_link"
     jackal_anchor_frame = "jackal_anchor"
     camera_frame = "camera_color_frame"
+    # Root of the realsense TF tree; table_poses_tf parents it to arm_base_link_frame
+    camera_root_frame = "camera_camera_color_frame"
     jackal_frame = "tag16h5:1"
     table_frame = "tag16h5:0"
 
@@ -95,9 +97,9 @@ def generate_launch_description():
                 namespace="table_camera",
                 parameters=[
                     {
-                        "arm_base_link_frame": arm_base_link_frame,
+                        "kinova_base_link_frame": arm_base_link_frame,
                         "jackal_anchor_frame": jackal_anchor_frame,
-                        "camera_frame": camera_frame,
+                        "camera_frame": camera_root_frame,
                         "jackal_frame": jackal_frame,
                         "table_frame": table_frame,
                         "publish_rate_hz": 10.0,

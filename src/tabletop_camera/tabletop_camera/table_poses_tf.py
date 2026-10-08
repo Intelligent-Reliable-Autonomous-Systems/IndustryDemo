@@ -164,11 +164,17 @@ class TablePosesInKinova(Node):
             mat_base_to_jackal, mat_jackal_to_cam, mat_cam_to_table
         )
 
+        # base -> jackal frame -> cam, attaches the camera tree under the Kinova base
+        mat_base_to_cam = t3.concatenate_matrices(mat_base_to_jackal, mat_jackal_to_cam)
+
         stamp = cam_to_table.header.stamp
         transforms = [
             _stamped_from_matrix(
+                mat_base_to_cam, stamp, self.base_frame, self.camera_frame
+            ),
+            _stamped_from_matrix(
                 mat_base_to_table, stamp, self.base_frame, "table_in_base"
-            )
+            ),
         ]
         for frame_name, mat_table_to_obj in self.poses_in_table_frame:
             mat_base_to_pose = t3.concatenate_matrices(mat_base_to_table, mat_table_to_obj)
