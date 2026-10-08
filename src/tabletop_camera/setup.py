@@ -34,6 +34,8 @@ setup(
             "table_poses_tf = tabletop_camera.table_poses_tf:main",
             "pose_markers = tabletop_camera.pose_markers:main",
             "side_grasp_action = tabletop_camera.side_grasp_action:main",
+            "teleop_kinova = tabletop_camera.kinova_teleop:main",
+            "kinova_ee_pub = tabletop_camera.kinova_ee_publisher:main",
         ],
     },
 )

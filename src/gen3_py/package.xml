@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>gen3_py</name>
+  <version>0.0.0</version>
+  <description>Main Kinova Gen3 Launch Package</description>
+  <maintainer email="soloww@oregonstate.edu">Will Solow</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <build_depend>tf_transformations</build_depend>
+  <build_depend>py_trees</build_depend>
+  <build_depend>py_trees_ros_interfaces</build_depend>
+  <build_depend>py_trees_ros</build_depend>
+  <build_depend>py_trees_ros_viewer</build_depend>
+  <build_depend>rosbridge_server</build_depend>
+  <build_depend>pinocchio</build_depend>
+
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

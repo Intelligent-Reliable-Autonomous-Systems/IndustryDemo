@@ -17,3 +17,6 @@ ros2 action send_goal --feedback \
   control_msgs/action/ParallelGripperCommand \
   "{command: {name: ['right_finger_bottom_joint'], position: [0.5]}}"
   
+  ros2 action send_goal /robotiq_gripper_controller/gripper_cmd \
+  control_msgs/action/GripperCommand \
+  "{command: {position: 0.0, max_effort: 100.0}}"
