@@ -48,7 +48,7 @@ def generate_launch_description():
                         "image_transport": "raw",     
                         "family": "16h5",
                         "size": 0.1,
-                        "max_hamming": 1,            
+                        "max_hamming": 0,  # 16h5 false-detects easily; no bit correction
                         "detector": {
                             "threads": 4,              
                             "decimate": 1.0,           
@@ -59,6 +59,8 @@ def generate_launch_description():
                         },
                         "tag": {
                             "ids": [1, 0],
+                            # Only tags listed in frames are published to TF
+                            "frames": [jackal_frame, table_frame],
                             "sizes": [0.1, 0.1],
                         },
                     }
@@ -105,13 +107,13 @@ def generate_launch_description():
                         "publish_rate_hz": 10.0,
                         # Three poses hardcoded in the table frame (xyz + xyzw).
                         # Replace with your calibrated values.
-                        "obj_0_xyz": [0.0, 0.18, 0.05],
+                        "obj_0_xyz": [0.0, -0.18, 0.05],
                         "obj_0_xyzw": [0.0, 0.0, 0.0, 1.0],
                         "obj_0_frame": "table_pose_0",
-                        "obj_1_xyz": [0.05, 0.36, 0.05],
+                        "obj_1_xyz": [0.05, -0.36, 0.05],
                         "obj_1_xyzw": [0.0, 0.0, 0.0, 1.0],
                         "obj_1_frame": "table_pose_1",
-                        "obj_2_xyz": [0.0, 0.52, 0.05],
+                        "obj_2_xyz": [0.0, -0.52, 0.05],
                         "obj_2_xyzw": [0.0, 0.0, 0.0, 1.0],
                         "obj_2_frame": "table_pose_2",
                     }
