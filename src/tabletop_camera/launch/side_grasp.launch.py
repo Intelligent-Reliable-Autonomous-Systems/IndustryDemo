@@ -21,12 +21,12 @@ def generate_launch_description():
                         "apply_planning_scene_service": "apply_planning_scene",
                         "gripper_action": "/gen3_lite_2f_gripper_controller/gripper_cmd",
                         "gripper_joint": "right_finger_bottom_joint",
-                        # Must match the TF frames published by tag11_poses_tf.
+                        # Must match the TF frames published by table_poses_tf.
                         "object_names": ["coffee cup", "coke can", "water bottle"],
                         "object_frames": [
-                            "tag11_pose_0",
-                            "tag11_pose_1",
-                            "tag11_pose_2",
+                            "table_pose_0",
+                            "table_pose_1",
+                            "table_pose_2",
                         ],
                         "pregrasp_standoff_m": 0.12,
                         "grasp_inset_m": 0.0,
@@ -34,14 +34,14 @@ def generate_launch_description():
                         "retract_up_m": 0.08,
                         "retract_out_m": 0.12,
                         "publish_counter_collision": True,
-                        # Same footprint as table_scene_node defaults.
-                        "counter_x0": -0.0889,
-                        "counter_y0": -0.577,
-                        "counter_dx": 0.762,
-                        "counter_dy": 1.2446,
-                        "counter_thickness": 0.03,
-                        "counter_bulk_height": 0.35,
-                        "counter_bulk_inset_from_edge": 0.08,
+                        # Counter footprint is relative to table (published as
+                        # table_in_base by table_poses_tf), not Kinova base_link.
+                        "counter_frame": "table_in_base",
+                        "counter_x0": 1.15,
+                        "counter_y0": -5.15,
+                        "counter_dx": 0.90,
+                        "counter_dy": 0.45,
+                        "counter_thickness": 0.05,
                     }
                 ],
             )

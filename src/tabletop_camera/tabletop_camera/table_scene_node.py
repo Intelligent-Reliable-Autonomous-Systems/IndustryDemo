@@ -30,14 +30,14 @@ class TableSceneVisualizer(Node):
         self.marker_pub = self.create_publisher(MarkerArray, "table_scene_markers", 10)
 
         self.declare_parameter("base_frame", "base_link")
-        self.declare_parameter("tag0_frame", "tag0_anchor")
+        self.declare_parameter("table_frame", "tag0_anchor")
         self.declare_parameter("camera_frame", "camera_color_frame")
         self.declare_parameter("tag_size", 0.1)
         self.declare_parameter("publish_rate_hz", 2.0)
         self.declare_parameter("table_leg_height", 0.73)
 
         self.base_frame = self.get_parameter("base_frame").value
-        self.tag0_frame = self.get_parameter("tag0_frame").value
+        self.table_frame = self.get_parameter("table_frame").value
         self.camera_frame = self.get_parameter("camera_frame").value
         self.tag_size = self.get_parameter("tag_size").value
         rate = self.get_parameter("publish_rate_hz").value
@@ -55,7 +55,7 @@ class TableSceneVisualizer(Node):
     def _load_tag_texture(self):
         """Read the AprilTag PNG into a CompressedImage for embedding."""
         try:
-            pkg_dir = get_package_share_directory("iras_viz")
+            pkg_dir = get_package_share_directory("tabletop_camera")
             tag_path = os.path.join(pkg_dir, "data", "apriltag", "AprilTag-tag36h11-ID0.png")
             with open(tag_path, "rb") as f:
                 png_bytes = f.read()
@@ -223,7 +223,7 @@ class TableSceneVisualizer(Node):
         half = self.tag_size / 2.0
 
         m = Marker()
-        m.header.frame_id = self.tag0_frame
+        m.header.frame_id = self.table_frame
         m.header.stamp = stamp
         m.ns = "apriltag0"
         m.id = 0

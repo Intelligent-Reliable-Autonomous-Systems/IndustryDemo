@@ -5,9 +5,9 @@ Exposes GraspObject.action (object name string). Internally uses the MoveIt
 MoveGroup / ExecuteTrajectory action clients plus the gripper ParallelGripper
 command to:
 
-1. Resolve the named object to a TF frame published by tag11_poses_tf
-2. Seed the planning scene with a counter collision box (arm base is below
-   the objects on the counter edge)
+1. Resolve the named object to a TF frame published by table_poses_tf
+2. Seed the planning scene with a counter collision box expressed in the
+   table frame (so it stays fixed to the counter as the mobile base moves)
 3. Open the gripper, move to a side-grasp pre-approach pose, Cartesian-slide
    into the grasp, close, then retract up and toward the robot while keeping
    the end-effector orientation (object upright)
@@ -90,22 +90,30 @@ def _quat_xyzw_from_rotmat(R: np.ndarray) -> Tuple[float, float, float, float]:
 
 
 def side_grasp_orientation(approach_xy: Sequence[float]) -> Quaternion:
-    """Build an EE orientation for a horizontal side grasp that keeps objects upright.
+    """Build an EE orientation for a horizontal side grasp.
 
-    Kinova tool convention: +Z is the gripper approach axis. World +Z stays
-    roughly aligned with the gripper's "up" so a grasped cup/can remains upright.
+    The EE +Z axis points toward the object (approach direction).
+    The EE +X axis points upward, making the gripper horizontal
+    instead of vertically oriented.
     """
     ax, ay = float(approach_xy[0]), float(approach_xy[1])
+    # EE +Z points toward the object.
     z_axis = _normalize(np.array([ax, ay, 0.0], dtype=float))
-    world_up = np.array([0.0, 0.0, 1.0], dtype=float)
-    x_axis = np.cross(world_up, z_axis)
-    if np.linalg.norm(x_axis) < 1e-6:
-        x_axis = np.array([1.0, 0.0, 0.0], dtype=float)
-    x_axis = _normalize(x_axis)
+    # World +Z should become the EE +X axis.
+    x_axis = np.array([0.0, 0.0, 1.0], dtype=float)
+    # Construct a right-handed frame.
     y_axis = _normalize(np.cross(z_axis, x_axis))
+    # Recompute X to guarantee orthogonality/right-handedness.
+    x_axis = _normalize(np.cross(y_axis, z_axis))
     R = np.column_stack((x_axis, y_axis, z_axis))
     qx, qy, qz, qw = _quat_xyzw_from_rotmat(R)
-    return Quaternion(x=qx, y=qy, z=qz, w=qw)
+
+    return Quaternion(
+        x=qx,
+        y=qy,
+        z=qz,
+        w=qw,
+    )
 
 
 def make_pose(xyz: Sequence[float], quat: Quaternion) -> Pose:
@@ -135,12 +143,12 @@ class SideGraspAction(Node):
         )
         self.declare_parameter("gripper_joint", "right_finger_bottom_joint")
 
-        # Object name → TF frame map (must match tag11_poses_tf published frames)
+        # Object name to TF frame map (must match table_poses_tf published frames)
         self.declare_parameter(
             "object_names", ["coffee cup", "coke can", "water bottle"]
         )
         self.declare_parameter(
-            "object_frames", ["tag11_pose_0", "tag11_pose_1", "tag11_pose_2"]
+            "object_frames", ["table_pose_0", "table_pose_1", "table_pose_2"]
         )
 
         # Grasp geometry (metres)
@@ -151,7 +159,7 @@ class SideGraspAction(Node):
         self.declare_parameter("retract_out_m", 0.12)
         self.declare_parameter("cartesian_step_m", 0.01)
         self.declare_parameter("cartesian_jump_threshold", 0.0)
-        self.declare_parameter("min_cartesian_fraction", 0.85)
+        self.declare_parameter("min_cartesian_fraction", 0.0)
         self.declare_parameter("position_tolerance_m", 0.01)
         self.declare_parameter("orientation_tolerance_rad", 0.15)
         self.declare_parameter("planning_time_s", 5.0)
@@ -163,19 +171,19 @@ class SideGraspAction(Node):
         self.declare_parameter("gripper_max_effort", 50.0)
         self.declare_parameter("tf_lookup_timeout_s", 2.0)
 
-        # Counter collision box in base_frame (matches table_scene_node defaults)
+        # Counter collision box in counter_frame (table), not the Kinova base.
+        # The arm rides a mobile base, so the counter must track table rather
+        # than stay fixed in base_link.
         self.declare_parameter("publish_counter_collision", True)
+        self.declare_parameter("counter_frame", "table_in_base")
         self.declare_parameter("counter_x0", -0.0889)
         self.declare_parameter("counter_y0", -0.577)
         self.declare_parameter("counter_dx", 0.762)
         self.declare_parameter("counter_dy", 1.2446)
         self.declare_parameter("counter_thickness", 0.03)
-        # Extra bulk behind the edge so the planner treats the counter volume
-        # as occupied above the surface near the edge (arm approaches from below).
-        self.declare_parameter("counter_bulk_height", 0.35)
-        self.declare_parameter("counter_bulk_inset_from_edge", 0.08)
 
         self.base_frame = self.get_parameter("base_frame").value
+        self.counter_frame = self.get_parameter("counter_frame").value
         self.ee_link = self.get_parameter("ee_link").value
         self.planning_group = self.get_parameter("planning_group").value
         self.gripper_joint = self.get_parameter("gripper_joint").value
@@ -279,6 +287,13 @@ class SideGraspAction(Node):
                 self.get_parameter("grasp_z_offset_m").value
             )
 
+            ox = 0.3
+            oy = 0.0
+            oz = 0.3
+
+            self.get_logger().info(f"Position of Object to grasp: ({ox}, {oy}, {oz})")
+
+
             # Horizontal approach: from robot toward object in the XY plane.
             radial = np.array([ox, oy], dtype=float)
             if np.linalg.norm(radial) < 1e-3:
@@ -322,6 +337,7 @@ class SideGraspAction(Node):
             if goal_handle.is_cancel_requested:
                 return self._cancel(goal_handle, result, "Cancelled before pregrasp")
 
+            self.get_logger().info(f"Pregrasp pose: {pregrasp_xyz}")
             publish_status(
                 f"Moving to pregrasp "
                 f"({pregrasp_xyz[0]:.3f}, {pregrasp_xyz[1]:.3f}, {pregrasp_xyz[2]:.3f})"
@@ -401,9 +417,32 @@ class SideGraspAction(Node):
         pose.orientation = Quaternion(x=r.x, y=r.y, z=r.z, w=r.w)
         return pose
 
+    def _counter_frame_available(self) -> bool:
+        """True if counter_frame is reachable from base_frame (table visible)."""
+        timeout = Duration(
+            seconds=float(self.get_parameter("tf_lookup_timeout_s").value)
+        )
+        try:
+            self.tf_buffer.lookup_transform(
+                self.base_frame, self.counter_frame, Time(), timeout=timeout
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(
+                f"TF lookup {self.base_frame}->{self.counter_frame}: {exc}"
+            )
+            return False
+
     async def _apply_counter_collision(self) -> bool:
         if not self._scene_cli.wait_for_service(timeout_sec=5.0):
             self.get_logger().error("apply_planning_scene service unavailable")
+            return False
+
+        if not self._counter_frame_available():
+            self.get_logger().error(
+                f"Counter frame '{self.counter_frame}' unavailable; "
+                "is table detected?"
+            )
             return False
 
         x0 = float(self.get_parameter("counter_x0").value)
@@ -411,54 +450,29 @@ class SideGraspAction(Node):
         dx = float(self.get_parameter("counter_dx").value)
         dy = float(self.get_parameter("counter_dy").value)
         th = float(self.get_parameter("counter_thickness").value)
-        bulk_h = float(self.get_parameter("counter_bulk_height").value)
-        inset = float(self.get_parameter("counter_bulk_inset_from_edge").value)
 
         stamp = self.get_clock().now().to_msg()
-        objects = []
 
-        # Tabletop slab (top face near z=0, matching table_scene_node)
-        top = CollisionObject()
-        top.header = Header(frame_id=self.base_frame, stamp=stamp)
-        top.id = "counter_top"
-        top.operation = CollisionObject.ADD
+        # Single box in counter_frame (table). Top face near z=0 of the tag.
+        counter = CollisionObject()
+        counter.header = Header(frame_id=self.counter_frame, stamp=stamp)
+        counter.id = "counter"
+        counter.operation = CollisionObject.ADD
         prim = SolidPrimitive()
         prim.type = SolidPrimitive.BOX
         prim.dimensions = [dx, dy, th]
         pose = Pose()
-        pose.orientation.w = 1.0
+        pose.orientation.z = 0.707168
+        pose.orientation.w = 0.707168
         pose.position.x = x0 + dx / 2.0
         pose.position.y = y0 + dy / 2.0
         pose.position.z = -th / 2.0
-        top.primitives.append(prim)
-        top.primitive_poses.append(pose)
-        objects.append(top)
-
-        # Bulk volume set back from the near edge so the arm may approach the
-        # edge-mounted objects from below/side without planning through the
-        # counter interior.
-        bulk = CollisionObject()
-        bulk.header = Header(frame_id=self.base_frame, stamp=stamp)
-        bulk.id = "counter_bulk"
-        bulk.operation = CollisionObject.ADD
-        bprim = SolidPrimitive()
-        bprim.type = SolidPrimitive.BOX
-        bulk_dx = max(dx - inset, 0.05)
-        bulk_dy = max(dy - inset, 0.05)
-        bprim.dimensions = [bulk_dx, bulk_dy, bulk_h]
-        bpose = Pose()
-        bpose.orientation.w = 1.0
-        # Shift bulk away from the robot-side edge (near y0 / x0 corner).
-        bpose.position.x = x0 + inset + bulk_dx / 2.0
-        bpose.position.y = y0 + inset + bulk_dy / 2.0
-        bpose.position.z = bulk_h / 2.0
-        bulk.primitives.append(bprim)
-        bulk.primitive_poses.append(bpose)
-        objects.append(bulk)
+        counter.primitives.append(prim)
+        counter.primitive_poses.append(pose)
 
         req = ApplyPlanningScene.Request()
         req.scene.is_diff = True
-        req.scene.world.collision_objects = objects
+        req.scene.world.collision_objects = [counter]
         future = self._scene_cli.call_async(req)
         await future
         resp = future.result()
@@ -481,8 +495,10 @@ class SideGraspAction(Node):
         bv = BoundingVolume()
         bv.primitives.append(sphere)
         center = Pose()
-        center.position = pose.position
+        #center.position = pose.position
+        #center.orientation.z = 0.707168
         center.orientation.w = 1.0
+        #center.orientation.w = -0.707168
         bv.primitive_poses.append(center)
         pc.constraint_region = bv
         constraints.position_constraints.append(pc)
