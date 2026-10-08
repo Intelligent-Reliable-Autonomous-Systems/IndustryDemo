@@ -12,15 +12,15 @@ setup(
         (
             "share/" + package_name + "/launch",
             [
-                "launch/test.launch.py",
                 "launch/rgbd_april.launch.py",
-                "launch/static_table_depth.launch.py",
-                "launch/table_scene.launch.py"
+                "launch/rgbd_april_poses.launch.py",
+                "launch/table_scene.launch.py",
+                "launch/side_grasp.launch.py",
             ],
         ),
         ("share/" + package_name + "/config", ["config/camera_info.yaml"]),
     ],
-    install_requires=["setuptools", "transforms3d"],
+    install_requires=["setuptools", "transforms3d", "numpy"],
     zip_safe=True,
     maintainer="jjewett",
     maintainer_email="jewettje@oregonstate.edu",
@@ -32,6 +32,8 @@ setup(
             "latest_rgbd_service = tabletop_camera.latest_rgbd_service:main",
             "camera_tf = tabletop_camera.camera_tf:main",
             "table_scene = tabletop_camera.table_scene_node:main",
+            "tag11_poses_tf = tabletop_camera.tag11_poses_tf:main",
+            "side_grasp_action = tabletop_camera.side_grasp_action:main",
         ],
     },
 )

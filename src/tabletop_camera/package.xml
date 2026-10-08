@@ -16,6 +16,10 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>builtin_interfaces</depend>
+  <depend>moveit_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>shape_msgs</depend>
+  <depend>action_msgs</depend>
   <exec_depend>apriltag_ros</exec_depend>
 
   <build_depend>python3-opencv</build_depend>

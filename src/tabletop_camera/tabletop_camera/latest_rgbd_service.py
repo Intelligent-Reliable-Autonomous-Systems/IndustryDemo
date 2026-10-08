@@ -1,4 +1,6 @@
-"""On-demand RGB-D snapshot service for RealSense."""
+"""On-demand RGB-D snapshot service for RealSense.
+
+Listens to the camera pose and publishes the image and pose. For reference only."""
 
 from __future__ import annotations
 
